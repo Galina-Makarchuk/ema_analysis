@@ -1,10 +1,12 @@
 # Which EMA does price actually respect?
 
-This notebook tests a full range of EMA periods against real market data from ByBit perpetual futures and tells you which ones the market actually treats as support or resistance on your chosen symbol and timeframe.
+This notebook allows to test a full range of EMA periods against real market data from ByBit perpetual futures and tells you which ones the market actually treats as support or resistance on your chosen symbol and timeframe.
+
+Use it to find the most relevant EMAs for the market you trade.
 
 ## What it does
 
-For a user-supplied range of EMA periods (e.g. `range(1, 200)`), a symbol, an interval, and a date range, it counts per EMA:
+For a user-supplied range of EMA periods, a symbol, an interval, and a date range, it counts per EMA:
 
 - **low_touches** — candles whose Low came within `delta` of the EMA
 - **high_touches** — candles whose High came within `delta` of the EMA
