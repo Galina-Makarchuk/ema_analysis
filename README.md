@@ -39,11 +39,11 @@ Three stages, all implemented in `ema_analysis.ipynb`:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install requests pandas numpy matplotlib jupyter
+pip install requests pandas numpy plotly jupyter
 jupyter lab ema_analysis.ipynb
 ```
 
-Then inside the notebook:
+Then inside the notebook (all arguments are configurable — replace them with values for your own market):
 
 ```python
 result = run(
