@@ -46,15 +46,16 @@ jupyter lab ema_analysis.ipynb
 Then inside the notebook (all arguments are configurable — replace them with values for your own market):
 
 ```python
-result = run(
-    symbol="BTCUSDT",
-    interval="15",
-    start="2026-01-01",
-    end="2026-04-01",
-    ema_range=range(1, 200),
-    delta=50,
-    delta_mode="absolute",
-)
+symbol     = "BTCUSDT"
+interval   = "15"
+start      = "2026-01-01"
+end        = "2026-04-01"
+ema_range  = range(1, 200, 1)
+delta      = 50
+delta_mode = "absolute"
+
+df = fetch_bybit_klines(symbol, interval, start, end)
+result = analyze_ema_touches(df, ema_range, delta, delta_mode)
 ```
 
 ## Project layout
