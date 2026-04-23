@@ -1,4 +1,4 @@
-# Which EMA does price actually respect?
+# Which EMAs does price actually respect?
 
 This notebook allows to test a full range of EMA periods against real market data from ByBit perpetual futures and tells you which ones the market actually treats as support or resistance on your chosen symbol and timeframe.
 
