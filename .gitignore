@@ -1,0 +1,12 @@
+# data exports
+*.csv
+
+# local-only
+CLAUDE.md
+.claude/
+
+# system / runtime cruft
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+.venv/
