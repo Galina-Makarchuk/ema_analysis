@@ -1,5 +1,9 @@
 """Backtest engine for the EMA touch / cross strategy.
 
+- single source of truth
+- version-controllable
+- importable from other notebooks too
+
 Public API
 ----------
 Configs:    StopLossConfig, TakeProfitConfig, PositionSizingConfig, StrategyConfig
@@ -62,7 +66,7 @@ class StopLossConfig:
     """
     mode: Literal["fixed_value", "fixed_pct", "beyond_ema", "trailing", "chandelier"]
     value: float
-    atr_period: int = 22
+    atr_period: int = 11
 
 
 @dataclass
@@ -119,6 +123,12 @@ class StrategyConfig:
 # ============================================================================
 
 def _compute_atr(df: pd.DataFrame, period: int) -> pd.Series:
+    """Wilder's ATR: RMA of true range (alpha = 1/period, adjust=False).
+
+    Matches TradingView/Welles-Wilder ATR and the project's `ewm(..., adjust=False)`
+    convention. Engine warmup already gates `atr_period` bars, so the unseeded
+    EWM startup is masked.
+    """
     high, low, close = df["high"], df["low"], df["close"]
     prev_close = close.shift()
     tr = pd.concat([
@@ -126,7 +136,7 @@ def _compute_atr(df: pd.DataFrame, period: int) -> pd.Series:
         (high - prev_close).abs(),
         (low - prev_close).abs(),
     ], axis=1).max(axis=1)
-    return tr.rolling(period).mean()
+    return tr.ewm(alpha=1 / period, adjust=False).mean()
 
 
 def _initial_long_stop(cfg, entry_price, ema_val, tol_val, high, atr_val):
