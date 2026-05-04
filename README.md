@@ -8,16 +8,16 @@ Use it to find the most relevant EMAs for the market you trade.
 
 For a user-supplied range of EMA periods, a symbol, an interval, and a date range, it counts per EMA:
 
-- **low_touches** — candles whose Low came within `delta` of the EMA
-- **high_touches** — candles whose High came within `delta` of the EMA
-- **crosses** — candles whose range straddled the EMA (`Low ≤ EMA ≤ High`)
+- **low_touch** — candles whose Low came within `delta` of the EMA
+- **high_touch** — candles whose High came within `delta` of the EMA
+- **cross** — candles whose range straddled the EMA (`Low ≤ EMA ≤ High`)
 - **above / below** — candles trading entirely above / below the EMA
 
 It then derives three interpretive ratios:
 
-- **Support ratio** = `low_touches / crosses`
-- **Resistance ratio** = `high_touches / crosses`
-- **Universal ratio** = `(low_touches + high_touches) / crosses`
+- **Support ratio** = `support_held / support_test`
+- **Resistance ratio** = `resistance_held / resistance_test`
+- **Universal ratio** = `(support_held + resistance_held) / (support_test + resistance_test)`
 
 High ratios — especially when clustered across neighbouring EMA periods — suggest a price level that the market respects.
 
