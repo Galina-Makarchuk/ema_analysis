@@ -28,8 +28,10 @@ Conventions worth preserving:
 - Each cross is counted in exactly one direction, resolved by ``open`` vs EMA:
   ``cross_from_above = cross AND open > EMA`` (a support test),
   ``cross_from_below = cross AND open < EMA`` (a resistance test).
-- ``crosses.replace(0, np.nan)`` before division is load-bearing — avoids div-by-zero
-  spikes in the ratio columns.
+- ``series.replace(0, np.nan)`` before dividing (applied to each ratio's
+  denominator — ``support_test``, ``resistance_test``, or their sum — in the
+  pickers and notebooks) is load-bearing: it converts a 0-count denominator
+  into NaN instead of raising or producing infinities.
 - Warmup skipping is opt-out, not opt-in.
 """
 from __future__ import annotations
@@ -75,9 +77,12 @@ def fetch_bybit_klines(
     symbol     : e.g. ``"BTCUSDT"``.
     interval   : minute bucket as a string. One of
                  ``"1","3","5","15","30","60","120","240","360","720","D","W","M"``.
-    start, end : ISO date strings, e.g. ``"2024-01-01"``. ``end`` is exclusive at
-                 the millisecond boundary; the returned DataFrame is filtered to
-                 ``timestamp <= end`` inclusive.
+    start, end : ISO date strings, e.g. ``"2024-01-01"``. Both are interpreted
+                 as midnight UTC. The returned DataFrame contains candles with
+                 timestamp in ``[start, end]`` inclusive at the midnight boundary —
+                 i.e. a candle whose open is exactly at ``end`` 00:00:00 UTC is
+                 kept, but nothing after that. To extend through the full
+                 end-of-day, see the inline comment on ``end_ts``.
     category   : ``"linear"`` for USDT-margined perps,
                  ``"inverse"`` for coin-margined perps.
 

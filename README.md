@@ -119,7 +119,7 @@ For BTC at $50k: `delta=0.5%` ≈ $250; `delta=40` (absolute) is much tighter.
 
 ## Filters
 
-Two filters are applied across every ratio table and the EMA pickers:
+Two filters are applied to the hold-rate and rejection-rate ratios (ratios 1–2 in each section) and to the EMA pickers. The frequency / regime ratios (3, 4, 5) are reported unfiltered.
 
 - **Cross-saturation guard** (`MAX_CROSS_RATE = 0.3`): drops EMAs that hug price too tightly to act as S/R (a fast EMA's range crosses on most bars, making the close-direction inequalities trivial).
 - **Sample-size guard** (MIN_TOUCHES_*): require enough tests for the ratio to be statistically meaningful. Can be computed from the median of the relevant test column in result, so the threshold auto-scales with the dataset.
