@@ -1,3 +1,4 @@
 # parquet caches produced by 1_core_pipeline.ipynb
 # (regenerable from the configured symbol/interval/dates — no need to commit)
 *.parquet
+config.json

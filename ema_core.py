@@ -11,9 +11,10 @@ the three notebooks (1_core_pipeline, 2_ema_analysis, 3_ema_backtesting):
 
 Public API
 ----------
-Constants:    BYBIT_API, DATA_DIR
+Constants:    BYBIT_API, DATA_DIR, CONFIG_PATH
 Fetch:        fetch_bybit_klines, load_or_fetch_klines
-Analyze:      analyze_ema_touches, load_or_compute_result, run
+Analyze:      analyze_ema_touches, run
+Config:       save_config, load_config (single source of truth, written by NB1, read by NB2/NB3)
 Filters:      filter_by_cross_rate
 Helpers:      pick_best_ema_support, pick_best_ema_resistance, pick_best_ema_universal
 
@@ -34,6 +35,7 @@ Conventions worth preserving:
 from __future__ import annotations
 
 import hashlib
+import json
 import time
 from pathlib import Path
 from typing import Iterable
@@ -51,6 +53,7 @@ BYBIT_API = "https://api.bybit.com/v5/market/kline"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DATA_DIR = PROJECT_ROOT / "data"
+CONFIG_PATH = DATA_DIR / "config.json"
 
 
 
@@ -172,7 +175,8 @@ def analyze_ema_touches(
     ema_range: Iterable[int],
     delta: float,
     delta_mode: str,                        # "percent" (of EMA) or "absolute"
-    skip_warmup: bool,
+    *,
+    skip_warmup: bool = True,
 ) -> pd.DataFrame:
     """Count touch / cross / above / below behavior of every EMA in ``ema_range``.
 
@@ -304,18 +308,20 @@ def run(
     ema_range: Iterable[int],
     delta: float,
     delta_mode: str,
-    skip_warmup: bool,
     category: str,
+    *,
+    skip_warmup: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Convenience wrapper: fetch then analyze. Returns ``(df, result)``.
 
-    Note: this does NOT use the parquet cache. For cached, use ``load_or_fetch_klines``
-    + ``load_or_compute_result`` instead, which is what the notebooks do.
+    Note: this does NOT use the parquet cache. For cached OHLC, use
+    ``load_or_fetch_klines`` instead. ``result`` is recomputed each run
+    (cheap — typically a few seconds for ~200 EMAs over a year of data).
     """
     print(f"Fetching {symbol} interval={interval} from {start} to {end} ...")
     df = fetch_bybit_klines(symbol, interval, start, end, category)
     print(f"  -> {len(df)} candles downloaded.")
-    result = analyze_ema_touches(df, ema_range, delta, delta_mode, skip_warmup)
+    result = analyze_ema_touches(df, ema_range, delta, delta_mode, skip_warmup=skip_warmup)
     return df, result
 
 
@@ -332,45 +338,12 @@ def _klines_key(symbol: str, interval: str, start: str, end: str, category: str)
     return f"{symbol.lower()}_{interval}_{start}_{end}_{category}"
 
 
-def _result_config_hash(
-    ema_range: Iterable[int],
-    delta: float,
-    delta_mode: str,
-    skip_warmup: bool,
-) -> str:
-    payload = f"{list(ema_range)}|{delta}|{delta_mode}|{skip_warmup}"
-    return hashlib.sha256(payload.encode()).hexdigest()[:8]
-
-
 def klines_cache_path(
     symbol: str, interval: str, start: str, end: str, category: str
 ) -> Path:
     """Deterministic parquet path for cached OHLC."""
     _ensure_data_dir()
     return DATA_DIR / f"klines_{_klines_key(symbol, interval, start, end, category)}.parquet"
-
-
-def result_cache_path(
-    symbol: str,
-    interval: str,
-    start: str,
-    end: str,
-    ema_range: Iterable[int],
-    delta: float,
-    delta_mode: str,
-    skip_warmup: bool,
-    category: str,
-) -> Path:
-    """Deterministic parquet path for cached analyze_ema_touches output.
-
-    Path includes a short hash of (ema_range, delta, delta_mode, skip_warmup) so
-    changing any of those produces a fresh cache entry.
-    """
-    _ensure_data_dir()
-    cfg_hash = _result_config_hash(ema_range, delta, delta_mode, skip_warmup)
-    return DATA_DIR / (
-        f"result_{_klines_key(symbol, interval, start, end, category)}_{cfg_hash}.parquet"
-    )
 
 
 def load_or_fetch_klines(
@@ -394,8 +367,11 @@ def load_or_fetch_klines(
     return df
 
 
-def load_or_compute_result(
-    df: pd.DataFrame,
+# =============================================================================
+# Config: single source of truth (written by notebook 1, read by 2 and 3)
+# =============================================================================
+
+def save_config(
     symbol: str,
     interval: str,
     start: str,
@@ -403,28 +379,83 @@ def load_or_compute_result(
     ema_range: Iterable[int],
     delta: float,
     delta_mode: str,
-    skip_warmup: bool,
     category: str,
-    *,
-    force_recompute: bool = False,
-) -> pd.DataFrame:
-    """Return analyze_ema_touches output from cache, recomputing if missing or forced.
+) -> None:
+    """Write the notebook-1 config to ``data/config.json`` so notebooks 2 & 3 can load it.
 
-    The cache key includes ``(symbol, interval, start, end, category)`` plus a
-    short hash of ``(ema_range, delta, delta_mode, skip_warmup)`` — so changing
-    any analysis parameter creates a fresh cache entry.
+    ``ema_range`` is preserved as a ``range`` object across save/load (start/stop/step
+    are stored explicitly). Any other iterable (list, tuple, ndarray) is stored as a
+    flat list and loaded back as a list — both are accepted by ``analyze_ema_touches``.
     """
-    path = result_cache_path(
-        symbol, interval, start, end, ema_range, delta, delta_mode, skip_warmup, category
+    _ensure_data_dir()
+    if isinstance(ema_range, range):
+        ema_range_payload = {
+            "type": "range",
+            "start": ema_range.start,
+            "stop": ema_range.stop,
+            "step": ema_range.step,
+        }
+    else:
+        ema_range_payload = {"type": "list", "values": list(ema_range)}
+
+    cfg = {
+        "symbol": symbol,
+        "interval": interval,
+        "start": start,
+        "end": end,
+        "ema_range": ema_range_payload,
+        "delta": delta,
+        "delta_mode": delta_mode,
+        "category": category,
+    }
+    CONFIG_PATH.write_text(json.dumps(cfg, indent=2))
+    print(f"[ema_core] Saved config: {CONFIG_PATH.relative_to(PROJECT_ROOT)}")
+
+
+def load_config() -> dict:
+    """Load the config saved by notebook 1. Returns a dict ready to unpack.
+
+    Raises ``FileNotFoundError`` with a clear message if notebook 1 hasn't been
+    run yet (no ``data/config.json``).
+    """
+    if not CONFIG_PATH.exists():
+        raise FileNotFoundError(
+            f"No config found at {CONFIG_PATH}. "
+            f"Run 1_core_pipeline.ipynb first — it writes the config block "
+            f"to disk so this notebook can pick it up."
+        )
+    cfg = json.loads(CONFIG_PATH.read_text())
+
+    er = cfg["ema_range"]
+    if isinstance(er, dict) and er.get("type") == "range":
+        cfg["ema_range"] = range(er["start"], er["stop"], er["step"])
+    elif isinstance(er, dict) and er.get("type") == "list":
+        cfg["ema_range"] = er["values"]
+    # else: legacy plain list — leave as is
+
+    print(f"[ema_core] Loaded config: {CONFIG_PATH.relative_to(PROJECT_ROOT)}")
+    return cfg
+
+
+def load_and_analyze(force_refetch: bool = False) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    """Read ``data/config.json``, load OHLC from cache (or fetch), run analyze.
+
+    One-line pipeline reload for notebooks 2 and 3: replaces the load_config +
+    load_or_fetch_klines + analyze_ema_touches sequence. Returns ``(df, result, cfg)``.
+
+    Parameters
+    ----------
+    force_refetch : bool, default False
+        Pass through to ``load_or_fetch_klines`` to skip the parquet cache and
+        re-fetch OHLC from ByBit.
+    """
+    cfg = load_config()
+    df = load_or_fetch_klines(
+        cfg["symbol"], cfg["interval"], cfg["start"], cfg["end"],
+        cfg["category"], force_refetch=force_refetch,
     )
-    if path.exists() and not force_recompute:
-        print(f"[ema_core] Loading result cache: {path.name}")
-        return pd.read_parquet(path)
-    print(f"[ema_core] Computing analyze_ema_touches for {len(list(ema_range))} EMAs ...")
-    result = analyze_ema_touches(df, ema_range, delta, delta_mode, skip_warmup)
-    result.to_parquet(path)
-    print(f"[ema_core] Saved result cache: {path.name} ({len(result)} rows)")
-    return result
+    result = analyze_ema_touches(df, cfg["ema_range"], cfg["delta"], cfg["delta_mode"])
+    return df, result, cfg
 
 
 # =============================================================================
