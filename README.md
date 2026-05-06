@@ -1,6 +1,6 @@
 # Which EMAs does price actually respect?
 
-This notebook allows to test a full range of EMA periods against real market data from ByBit perpetual futures and tells you which ones the market actually treats as support or resistance on your chosen symbol and timeframe.
+This notebook allows to test a full range of EMA periods against real market data from Bybit perpetual futures and tells you which ones the market actually treats as support or resistance on your chosen symbol and timeframe.
 
 Use it to find the most relevant EMAs for the market you trade.
 
@@ -87,7 +87,7 @@ Then in order:
 
 | notebook | what it does | output |
 |---|---|---|
-| **`1_core_pipeline.ipynb`** | Defines and persists the config to `data/config.json`. Fetches OHLC from ByBit, runs analyze_ema_touches, caches the OHLC. | `data/klines_*.parquet`, `data/config.json` |
+| **`1_core_pipeline.ipynb`** | Defines and persists the config to `data/config.json`. Fetches OHLC from Bybit, runs analyze_ema_touches, caches the OHLC. | `data/klines_*.parquet`, `data/config.json` |
 | **`2_ema_analysis.ipynb`** | Loads config via `load_config()`. Loads OHLC from cache, recomputes the analysis. Ranks EMAs as support / resistance / universal across 13 ratios. Visualises the picks. | rankings + plots |
 | **`3_ema_backtesting.ipynb`** | Loads config via `load_config()`. Loads OHLC from cache, recomputes the analysis. Two routes: **A** — backtest a hand-picked list of EMAs from notebook 2 head-to-head; **B** — walk-forward split, picks the best EMA on the train slice (direction-aware), runs the strategy on train + test. Parameter sweeps work on either route's cfg. | trade results, equity curve, metrics |
 
@@ -95,7 +95,7 @@ Re-running notebook 1 with the **same** configuration loads OHLC from cache inst
 
 ### 4. Force a refresh
 
-If you want to re-fetch OHLC from ByBit (e.g. ByBit corrected historical data):
+If you want to re-fetch OHLC from Bybit (e.g. Bybit corrected historical data):
 
 ```python
 df = load_or_fetch_klines(symbol, interval, start, end, category, force_refetch=True)
@@ -131,7 +131,7 @@ Both can be tightened or relaxed per-call by passing `max_cross_rate=...` and `m
 - EMA computation uses `ewm(span=period, adjust=False)` (Wilder / TradingView style). Switching to SMA or changing adjust would silently alter every downstream metric.
 - All inequalities in the held / direction logic are **strict**. A tie (`open == EMA` or `close == EMA`) counts as neither — this avoids degeneracies (especially EMA1, where `close == EMA` always).
 - Each cross is counted in exactly one direction (resolved by the bar's open), not double-counted as both a support and resistance test.
-- A 0.1s sleep between paginated ByBit requests is intentional rate-limiting.
+- A 0.1s sleep between paginated Bybit requests is intentional rate-limiting.
 
 ## Legacy
 

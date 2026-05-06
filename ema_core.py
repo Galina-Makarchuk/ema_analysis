@@ -3,7 +3,7 @@
 This module is the single source of truth for the pieces that are reused across
 the three notebooks (1_core_pipeline, 2_ema_analysis, 3_ema_backtesting):
 
-- Data fetch from ByBit
+- Data fetch from Bybit
 - Touch / cross analysis (the core algorithm)
 - Cache helpers (parquet, keyed by symbol/interval/dates and analysis config)
 - Filter helpers (cross-saturation guard, MIN_TOUCHES sample-size guard)
@@ -60,7 +60,7 @@ CONFIG_PATH = DATA_DIR / "config.json"
 
 
 # =============================================================================
-# Fetch (raw OHLCV from ByBit)
+# Fetch (raw OHLCV from Bybit)
 # =============================================================================
 
 def fetch_bybit_klines(
@@ -70,7 +70,7 @@ def fetch_bybit_klines(
     end: str,
     category: str,           # "linear" (USDT perps) or "inverse" (coin-margined)
 ) -> pd.DataFrame:
-    """Pull kline (OHLCV) data from ByBit v5, with automatic backward pagination.
+    """Pull kline (OHLCV) data from Bybit v5, with automatic backward pagination.
 
     Parameters
     ----------
@@ -93,7 +93,7 @@ def fetch_bybit_klines(
 
     Notes
     -----
-    ByBit caps each request at 1000 candles. We page backwards from ``end``,
+    Bybit caps each request at 1000 candles. We page backwards from ``end``,
     sleeping 0.1s between pages to be polite. ``retCode != 0`` raises ``RuntimeError``;
     a date range yielding zero candles raises ``ValueError``.
     """
@@ -113,14 +113,14 @@ def fetch_bybit_klines(
             "interval": interval,
             "start": start_ts,
             "end": cursor_end,
-            "limit": 1000,          # ByBit max per request
+            "limit": 1000,          # Bybit max per request
         }
         r = requests.get(BYBIT_API, params=params, timeout=20)
         r.raise_for_status()
         data = r.json()
 
         if data.get("retCode") != 0:
-            raise RuntimeError(f"ByBit API error: {data}")
+            raise RuntimeError(f"Bybit API error: {data}")
 
         batch = data["result"]["list"]      # newest first
         if not batch:
@@ -360,12 +360,12 @@ def load_or_fetch_klines(
     *,
     force_refetch: bool = False,
 ) -> pd.DataFrame:
-    """Return OHLC DataFrame from cache, fetching from ByBit if missing or forced."""
+    """Return OHLC DataFrame from cache, fetching from Bybit if missing or forced."""
     path = klines_cache_path(symbol, interval, start, end, category)
     if path.exists() and not force_refetch:
         print(f"[ema_core] Loading klines cache: {path.name}")
         return pd.read_parquet(path)
-    print(f"[ema_core] Fetching {symbol} {interval} {start} → {end} from ByBit ...")
+    print(f"[ema_core] Fetching {symbol} {interval} {start} → {end} from Bybit ...")
     df = fetch_bybit_klines(symbol, interval, start, end, category)
     df.to_parquet(path)
     print(f"[ema_core] Saved klines cache: {path.name} ({len(df)} candles)")
@@ -452,7 +452,7 @@ def load_and_analyze(force_refetch: bool = False) -> tuple[pd.DataFrame, pd.Data
     ----------
     force_refetch : bool, default False
         Pass through to ``load_or_fetch_klines`` to skip the parquet cache and
-        re-fetch OHLC from ByBit.
+        re-fetch OHLC from Bybit.
     """
     cfg = load_config()
     df = load_or_fetch_klines(
