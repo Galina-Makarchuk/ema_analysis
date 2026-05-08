@@ -2,7 +2,7 @@
 
 This notebook allows to test a full range of EMA periods against real market data from Bybit perpetual futures and tells you which ones the market actually treats as support or resistance on your chosen symbol and timeframe.
 
-Use it to find the most relevant EMAs for the market you trade.
+Use it to study which EMA periods historically coincided with support / resistance behaviour on a given symbol and timeframe.
 
 ## What it does
 
@@ -22,11 +22,14 @@ From these, it derives **13 interpretive ratios** in three families:
 - Resistance quality / strict rejection / frequency / bearishness / regime (5 ratios)
 - Universal hold rate / bounce rate / tradability (3 ratios)
 
-High ratios — especially when clustered across neighbouring EMA periods — suggest a price level that the market respects.
+High ratios — especially when clustered across neighbouring EMA periods — indicate EMAs that, on the historical sample analysed, coincided with price reactions. This is descriptive of past data only and does not imply future behaviour.
 
-Two filters (cross-saturation and sample-size) suppress structurally degenerate or under-sampled EMAs.
+Two filters (cross-frequency and sample-size) suppress structurally degenerate or under-sampled EMAs.
 
-The backtesting notebook then takes the picked EMAs and runs a full strategy with stops, take-profits, position sizing, fees, slippage, and parameter sweeps. Two routes are available: **Route A** backtests EMAs you choose by hand from notebook 2's rankings (head-to-head leaderboard); **Route B** runs walk-forward validation with an automated EMA picker on the train slice.
+The backtesting notebook then takes the picked EMAs and runs a full strategy with stops, take-profits, position sizing, fees, slippage, and parameter sweeps. \
+Two routes are available: 
+- **Route A** backtests EMAs you choose by hand from notebook 2's rankings (returns leaderboard); 
+- **Route B** runs walk-forward validation with an automated EMA picker on the train slice.
 
 ## Project layout
 
@@ -37,7 +40,7 @@ ema/
 ├── 1_core_pipeline.ipynb # fetch + analyze
 ├── 2_ema_analysis.ipynb # rank EMAs as support / resistance / universal S/R
 ├── 3_ema_backtesting.ipynb # strategy backtest (Route A: manual EMAs / Route B: walk-forward + auto picker) + sweeps
-├── ema_analysis.ipynb # original single-notebook version (legacy reference)
+├── ema_analysis.ipynb # original single-notebook version (legacy reference, not updated)
 ├── data/ # OHLC parquet cache (git-ignored)
 │ └── klines_*.parquet # raw OHLC, one file per symbol/interval/date-range/category
 ├── README.md
@@ -135,9 +138,18 @@ Both can be tightened or relaxed per-call by passing `max_cross_rate=...` and `m
 
 ## Legacy
 
-`ema_analysis.ipynb` is the original single-notebook version of the project. It's kept for reference but new work happens in the three split notebooks plus `ema_core.py`. The split version is faster to iterate on (no re-fetching for analysis tweaks) and easier to follow (each notebook has one job).
+`ema_analysis.ipynb` is the original single-notebook version of the project. It's kept for reference and is not updated. New work and updates happen in the three split notebooks plus `ema_core.py`. The split version is faster to iterate on (no re-fetching for analysis tweaks) and easier to follow (each notebook has one job).
+
+## Disclaimer
+
+This project is provided for **research and educational purposes only**. It is not investment advice, financial advice, trading advice, or a recommendation to buy, sell, or hold any asset. Nothing in this repository — including the code, notebooks, ratios, rankings, backtest results, or any output produced by running it — should be construed as a solicitation or recommendation to engage in any trading or investment strategy.
+
+Cryptocurrency and derivatives trading carry a high level of risk and may not be suitable for all investors. You can lose some or all of your capital. Past performance, including any backtested or simulated results produced by this software, is not indicative of future results. Backtests are simplified models and do not account for all real-world conditions (liquidity, slippage variability, exchange outages, funding costs, taxes, etc.).
+
+The software is provided "as is" without warranty of any kind, express or implied, including but not limited to warranties of accuracy, merchantability, fitness for a particular purpose, or non-infringement. The author makes no representation that the analysis, data, or results are correct, complete, or current. Market data is fetched from third-party APIs and may contain errors or omissions.
+
+By using this software you agree that you alone are responsible for any decisions you make and any losses you incur, and that the author and any contributors shall not be liable for any direct, indirect, incidental, consequential, or other damages arising from the use of, or inability to use, this software. You should consult a licensed financial advisor before making any investment decision.
 
 ## License
 
 MIT
-
